@@ -1,18 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useSocket } from '../../contexts/SocketContext';
-import { submissionsAPI, formsAPI } from '../../services/api';
+import { Link } from 'react-router-dom';
+import { mockForms, mockSubmissions } from '../../data/mockData';
 import { Submission, Form } from '../../types';
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
-  const { socket, joinRoom } = useSocket();
   const [stats, setStats] = useState({
     totalSubmissions: 0,
     recentSubmissions: 0,
-    statusBreakdown: [] as any[],
-    priorityBreakdown: [] as any[],
   });
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [recentForms, setRecentForms] = useState<Form[]>([]);
@@ -22,54 +17,23 @@ const Dashboard: React.FC = () => {
     loadDashboardData();
   }, []);
 
-  useEffect(() => {
-    if (socket) {
-      // Join dashboard room for real-time updates
-      joinRoom('dashboard');
+  const loadDashboardData = () => {
+    setLoading(true);
 
-      // Listen for new submissions
-      socket.on('new-submission', (data) => {
-        setRecentSubmissions(prev => [data.submission, ...prev.slice(0, 9)]);
-        setStats(prev => ({
-          ...prev,
-          totalSubmissions: prev.totalSubmissions + 1,
-          recentSubmissions: prev.recentSubmissions + 1,
-        }));
+    // Simulate loading delay
+    setTimeout(() => {
+      setStats({
+        totalSubmissions: mockSubmissions.length,
+        recentSubmissions: mockSubmissions.filter(s => {
+          const dayAgo = new Date();
+          dayAgo.setDate(dayAgo.getDate() - 1);
+          return new Date(s.createdAt) >= dayAgo;
+        }).length,
       });
-
-      // Listen for submission updates
-      socket.on('submission-updated', (data) => {
-        setRecentSubmissions(prev => 
-          prev.map(sub => 
-            sub._id === data.submission._id ? data.submission : sub
-          )
-        );
-      });
-
-      return () => {
-        socket.off('new-submission');
-        socket.off('submission-updated');
-      };
-    }
-  }, [socket, joinRoom]);
-
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      const [statsResponse, submissionsResponse, formsResponse] = await Promise.all([
-        submissionsAPI.getStats('7d'),
-        submissionsAPI.getSubmissions({ limit: 10 }),
-        formsAPI.getForms({ limit: 5 }),
-      ]);
-
-      setStats(statsResponse.data.data);
-      setRecentSubmissions(submissionsResponse.data.data);
-      setRecentForms(formsResponse.data.data);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    } finally {
+      setRecentSubmissions(mockSubmissions.slice(0, 10));
+      setRecentForms(mockForms);
       setLoading(false);
-    }
+    }, 300);
   };
 
   const getStatusColor = (status: string) => {
@@ -104,7 +68,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="dashboard">
       <div className="dashboard-header">
-        <h1>Welcome back, {user?.name}!</h1>
+        <h1>Welcome back!</h1>
         <p>Here's what's happening with your portal today.</p>
       </div>
 
@@ -136,7 +100,7 @@ const Dashboard: React.FC = () => {
         <div className="stat-card">
           <div className="stat-icon">👥</div>
           <div className="stat-content">
-            <h3>{user?.role}</h3>
+            <h3>Admin</h3>
             <p>Your Role</p>
           </div>
         </div>
@@ -148,7 +112,12 @@ const Dashboard: React.FC = () => {
           <div className="submissions-list">
             {recentSubmissions.length > 0 ? (
               recentSubmissions.map((submission) => (
-                <div key={submission._id} className="submission-item">
+                <Link
+                  key={submission._id}
+                  to={`/submissions/${submission._id}`}
+                  className="submission-item"
+                  style={{ textDecoration: 'none', color: 'inherit' }}
+                >
                   <div className="submission-info">
                     <h4>{submission.submissionNumber}</h4>
                     <p>
@@ -168,14 +137,16 @@ const Dashboard: React.FC = () => {
                     >
                       {submission.status}
                     </span>
-                    <span
-                      className="priority-badge"
-                      style={{ backgroundColor: getPriorityColor(submission.priority) }}
-                    >
-                      {submission.priority}
-                    </span>
+                    {submission.priority && (
+                      <span
+                        className="priority-badge"
+                        style={{ backgroundColor: getPriorityColor(submission.priority) }}
+                      >
+                        {submission.priority}
+                      </span>
+                    )}
                   </div>
-                </div>
+                </Link>
               ))
             ) : (
               <p className="no-data">No recent submissions</p>
@@ -188,7 +159,12 @@ const Dashboard: React.FC = () => {
           <div className="forms-list">
             {recentForms.length > 0 ? (
               recentForms.map((form) => (
-                <div key={form._id} className="form-item">
+                <Link
+                  key={form._id}
+                  to={`/forms/${form._id}`}
+                  className="form-item"
+                  style={{ textDecoration: 'none', color: 'inherit' }}
+                >
                   <div className="form-info">
                     <h4>{form.title}</h4>
                     <p>{form.description || 'No description'}</p>
@@ -201,7 +177,7 @@ const Dashboard: React.FC = () => {
                       {form.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))
             ) : (
               <p className="no-data">No forms available</p>

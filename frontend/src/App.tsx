@@ -12,15 +12,9 @@ import { FormsList, FormBuilder, FormViewer, FormSubmission } from './components
 import { SubmissionsList, SubmissionViewer, SubmissionEditor } from './components/Submissions';
 import './App.css';
 
-// Protected Route Component
+// Protected Route Component (disabled - no auth required)
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return <div className="loading">Loading...</div>;
-  }
-
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  return <>{children}</>;
 };
 
 // Public Route Component (redirect to dashboard if authenticated)
@@ -34,22 +28,8 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" />;
 };
 
-// Admin Only Route Component
+// Admin Only Route Component (disabled - no auth required)
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, user, loading } = useAuth();
-
-  if (loading) {
-    return <div className="loading">Loading...</div>;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user?.role !== 'admin') {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   return <>{children}</>;
 };
 

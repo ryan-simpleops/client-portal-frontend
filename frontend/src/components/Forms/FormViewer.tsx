@@ -1,19 +1,21 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useForms } from '../../contexts/FormsContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { mockForms } from '../../data/mockData';
+import { Form } from '../../types';
 import './FormViewer.css';
 
 const FormViewer: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { currentForm, loading, error, fetchForm, clearError } = useForms();
-  const { user } = useAuth();
+  const [form, setForm] = useState<Form | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (id) {
-      fetchForm(id);
-    }
-    return () => clearError();
+    setLoading(true);
+    setTimeout(() => {
+      const foundForm = mockForms.find(f => f._id === id);
+      setForm(foundForm || null);
+      setLoading(false);
+    }, 300);
   }, [id]);
 
   if (loading) {
@@ -24,20 +26,7 @@ const FormViewer: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="form-viewer">
-        <div className="error-message">
-          {error}
-        </div>
-        <Link to="/forms" className="btn btn-primary">
-          Back to Forms
-        </Link>
-      </div>
-    );
-  }
-
-  if (!currentForm) {
+  if (!form) {
     return (
       <div className="form-viewer">
         <div className="no-form">
@@ -51,238 +40,70 @@ const FormViewer: React.FC = () => {
     );
   }
 
-  const renderFieldPreview = (field: any) => {
-    switch (field.type) {
-      case 'text':
-      case 'email':
-      case 'number':
-        return (
-          <input
-            type={field.type}
-            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-            disabled
-            className="field-preview"
-          />
-        );
-      case 'textarea':
-        return (
-          <textarea
-            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-            disabled
-            className="field-preview"
-            rows={3}
-          />
-        );
-      case 'select':
-        return (
-          <select disabled className="field-preview">
-            <option>{field.placeholder || `Select ${field.label.toLowerCase()}`}</option>
-            {field.options?.map((option: string, index: number) => (
-              <option key={index} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        );
-      case 'radio':
-        return (
-          <div className="radio-group">
-            {field.options?.map((option: string, index: number) => (
-              <label key={index} className="radio-option">
-                <input type="radio" name={field.name} disabled />
-                <span>{option}</span>
-              </label>
-            ))}
-          </div>
-        );
-      case 'checkbox':
-        return (
-          <label className="checkbox-option">
-            <input type="checkbox" disabled />
-            <span>{field.label}</span>
-          </label>
-        );
-      case 'date':
-        return (
-          <input
-            type="date"
-            disabled
-            className="field-preview"
-          />
-        );
-      case 'file':
-        return (
-          <input
-            type="file"
-            disabled
-            className="field-preview"
-          />
-        );
-      default:
-        return (
-          <input
-            type="text"
-            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-            disabled
-            className="field-preview"
-          />
-        );
-    }
-  };
-
   return (
     <div className="form-viewer">
       <div className="form-viewer-header">
-        <div className="header-content">
-          <h1>{currentForm.title}</h1>
-          <div className="form-meta">
-            <span className={`status-badge ${currentForm.isActive ? 'active' : 'inactive'}`}>
-              {currentForm.isActive ? 'Active' : 'Inactive'}
-            </span>
-            {currentForm.isPublic && (
-              <span className="status-badge public">Public</span>
-            )}
-          </div>
+        <Link to="/forms" className="back-link">← Back to Forms</Link>
+        <div className="form-title-section">
+          <h1>{form.title}</h1>
+          <span className={`status-badge ${form.isActive ? 'active' : 'inactive'}`}>
+            {form.isActive ? 'Active' : 'Inactive'}
+          </span>
         </div>
-        <div className="header-actions">
-          {currentForm.isActive && (
-            <Link to={`/forms/${currentForm._id}/submit`} className="btn btn-primary">
-              Submit Form
-            </Link>
-          )}
-          {user?.permissions.canCreateForms && (
-            <>
-              <Link to={`/forms/${currentForm._id}/edit`} className="btn btn-outline">
-                Edit Form
-              </Link>
-              <Link to={`/forms/${currentForm._id}/submissions`} className="btn btn-secondary">
-                View Submissions
-              </Link>
-            </>
-          )}
-          <Link to="/forms" className="btn btn-outline">
-            Back to Forms
-          </Link>
+        <p className="form-description">{form.description}</p>
+      </div>
+
+      <div className="form-stats-bar">
+        <div className="stat-item">
+          <span className="stat-label">Total Submissions</span>
+          <span className="stat-value">{form.submissionCount}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Total Fields</span>
+          <span className="stat-value">{form.fields.length}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Created By</span>
+          <span className="stat-value">{form.createdBy?.name}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Created</span>
+          <span className="stat-value">{new Date(form.createdAt).toLocaleDateString()}</span>
         </div>
       </div>
 
-      {currentForm.description && (
-        <div className="form-description">
-          <p>{currentForm.description}</p>
-        </div>
-      )}
-
-      <div className="form-viewer-content">
-        <div className="form-preview-section">
-          <h2>Form Preview</h2>
-          <div className="form-preview">
-            {currentForm.fields.map((field, index) => (
-              <div key={index} className="form-field">
-                <label className="field-label">
-                  {field.label}
-                  {field.required && <span className="required">*</span>}
-                </label>
-                {renderFieldPreview(field)}
+      <div className="form-fields-section">
+        <h2>Form Fields</h2>
+        <div className="fields-list">
+          {form.fields.map((field, index) => (
+            <div key={index} className="field-item">
+              <div className="field-header">
+                <h3>{field.label}</h3>
+                <div className="field-badges">
+                  {field.required && <span className="badge required">Required</span>}
+                  <span className="badge type">{field.type}</span>
+                </div>
               </div>
-            ))}
-            {currentForm.isActive && (
-              <div className="form-preview-actions">
-                <Link to={`/forms/${currentForm._id}/submit`} className="btn btn-primary btn-large">
-                  Fill Out This Form
-                </Link>
-                <p className="preview-note">
-                  Click the button above to fill out and submit this form
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="form-details-section">
-          <h2>Form Details</h2>
-          <div className="details-grid">
-            <div className="detail-item">
-              <span className="detail-label">Form ID:</span>
-              <span className="detail-value">{currentForm._id}</span>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">Created by:</span>
-              <span className="detail-value">
-                {currentForm.createdBy?.name || 'Unknown User'}
-              </span>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">Created on:</span>
-              <span className="detail-value">
-                {new Date(currentForm.createdAt).toLocaleDateString()}
-              </span>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">Last updated:</span>
-              <span className="detail-value">
-                {new Date(currentForm.updatedAt).toLocaleDateString()}
-              </span>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">Total fields:</span>
-              <span className="detail-value">{currentForm.fields.length}</span>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">Submissions:</span>
-              <span className="detail-value">{currentForm.submissionCount}</span>
-            </div>
-          </div>
-
-          <div className="settings-section">
-            <h3>Form Settings</h3>
-            <div className="settings-list">
-              <div className="setting-item">
-                <span className="setting-label">Multiple submissions:</span>
-                <span className={`setting-value ${currentForm.settings.allowMultipleSubmissions ? 'enabled' : 'disabled'}`}>
-                  {currentForm.settings.allowMultipleSubmissions ? 'Allowed' : 'Not allowed'}
-                </span>
-              </div>
-              <div className="setting-item">
-                <span className="setting-label">Authentication required:</span>
-                <span className={`setting-value ${currentForm.settings.requireAuthentication ? 'enabled' : 'disabled'}`}>
-                  {currentForm.settings.requireAuthentication ? 'Required' : 'Not required'}
-                </span>
-              </div>
-              {currentForm.settings.notificationEmail && (
-                <div className="setting-item">
-                  <span className="setting-label">Notification email:</span>
-                  <span className="setting-value">{currentForm.settings.notificationEmail}</span>
+              {field.placeholder && (
+                <p className="field-placeholder">Placeholder: {field.placeholder}</p>
+              )}
+              {field.options && field.options.length > 0 && (
+                <div className="field-options">
+                  <strong>Options:</strong>
+                  <ul>
+                    {field.options.map((option, i) => (
+                      <li key={i}>{option}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
-              <div className="setting-item">
-                <span className="setting-label">Auto-response:</span>
-                <span className={`setting-value ${currentForm.settings.autoResponse?.enabled ? 'enabled' : 'disabled'}`}>
-                  {currentForm.settings.autoResponse?.enabled ? 'Enabled' : 'Disabled'}
-                </span>
-              </div>
             </div>
-          </div>
-
-          {currentForm.settings.autoResponse?.enabled && (
-            <div className="auto-response-section">
-              <h3>Auto-response Settings</h3>
-              <div className="auto-response-content">
-                {currentForm.settings.autoResponse?.subject && (
-                  <div className="auto-response-item">
-                    <span className="auto-response-label">Subject:</span>
-                    <span className="auto-response-value">{currentForm.settings.autoResponse.subject}</span>
-                  </div>
-                )}
-                {currentForm.settings.autoResponse?.message && (
-                  <div className="auto-response-item">
-                    <span className="auto-response-label">Message:</span>
-                    <div className="auto-response-message">{currentForm.settings.autoResponse.message}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          ))}
         </div>
+      </div>
+
+      <div className="form-meta-section">
+        <p>Last updated: {new Date(form.updatedAt).toLocaleString()}</p>
       </div>
     </div>
   );
