@@ -4,7 +4,8 @@ import { mockForms } from '../../data/mockData';
 import './FormsList.css';
 
 const FormsList: React.FC = () => {
-  const [forms, setForms] = useState(mockForms);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [forms] = useState(mockForms);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -4,7 +4,8 @@ import { mockSubmissions } from '../../data/mockData';
 import './SubmissionsList.css';
 
 const SubmissionsList: React.FC = () => {
-  const [submissions, setSubmissions] = useState(mockSubmissions);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [submissions] = useState(mockSubmissions);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
